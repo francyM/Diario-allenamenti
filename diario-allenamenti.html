@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Il mio diario di allenamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#FBFAF5;
+    --paper-line:#E7E2D4;
+    --ink:#2B2E4A;
+    --ink-soft:#767C97;
+    --ink-faint:#B3B7C7;
+    --card:#FFFFFF;
+    --card-border:#ECE7D8;
+    --btn-fg:#FFFFFF;
+    --red:#E63946;
+    --orange:#F2994A;
+    --blue:#457B9D;
+    --purple:#9B5DE5;
+    --green:#588157;
+    --yellow:#F2C94C;
+    --today-ring:#E63946;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 2px 14px rgba(43,46,74,0.07);
+    --shadow-lg:0 12px 40px rgba(43,46,74,0.18);
+  }
+  body.dark{
+    --paper:#1B1D2B;
+    --paper-line:#272A3D;
+    --ink:#F1F1F7;
+    --ink-soft:#A9ACC4;
+    --ink-faint:#5F6280;
+    --card:#242739;
+    --card-border:#343854;
+    --btn-fg:#1B1D2B;
+    --shadow:0 2px 14px rgba(0,0,0,0.35);
+    --shadow-lg:0 12px 40px rgba(0,0,0,0.5);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+    background-size:26px 26px;
+    color:var(--ink);
+    font-family:'Manrope',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:60px;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:20px 16px 40px;}
+
+  /* Header */
+  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;}
+  .brand h1{
+    font-family:'Caveat',cursive;
+    font-weight:700;
+    font-size:34px;
+    line-height:1;
+    margin:0;
+    color:var(--ink);
+  }
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.02em;}
+  .add-btn{
+    width:48px;height:48px;border-radius:50%;
+    background:var(--red);color:#fff;border:none;
+    font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow);cursor:pointer;flex-shrink:0;
+    transition:transform .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .add-btn:active{transform:scale(0.92);background:#C92E3A;}
+  body.dark .add-btn#btnAdd{box-shadow:0 0 0 1px rgba(255,255,255,0.08), 0 4px 18px rgba(230,57,70,0.45);}
+
+  /* Cards */
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .card-title{
+    font-family:'Caveat',cursive;font-weight:700;font-size:22px;
+    margin:0 0 10px;color:var(--ink);display:flex;align-items:center;justify-content:space-between;
+  }
+
+  /* Calendar */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-nav button{
+    background:var(--paper);border:1px solid var(--card-border);border-radius:50%;
+    width:34px;height:34px;font-size:16px;color:var(--ink);cursor:pointer;
+  }
+  .cal-nav .month-label{font-family:'Caveat',cursive;font-weight:700;font-size:24px;text-transform:capitalize;}
+  .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .weekdays span{text-align:center;font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em;}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .day-cell{
+    position:relative;aspect-ratio:1/1;border-radius:8px;
+    background:var(--card);border:1.5px solid var(--card-border);
+    display:flex;align-items:flex-end;justify-content:flex-start;
+    padding:4px;cursor:pointer;overflow:hidden;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);
+    transition:transform .1s ease;
+  }
+  .day-cell:active{transform:scale(0.94);}
+  .day-cell.other-month{opacity:.28;cursor:default;pointer-events:none;}
+  .day-cell.today{border-color:var(--today-ring);border-width:2.5px;box-shadow:0 0 0 2px rgba(230,57,70,0.12);}
+  .day-cell.has-workout{color:#fff;border-color:transparent;}
+  .day-cell .num{position:relative;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,0.25);}
+  .day-cell.has-workout.solo .num{text-shadow:none;}
+  .day-fill{position:absolute;inset:0;z-index:1;display:flex;}
+  .day-fill span{flex:1;height:100%;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:14px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+  /* Weekly stats card */
+  .stats-summary{cursor:pointer;}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .stat-box{background:var(--paper);border-radius:var(--radius-sm);padding:10px 12px;border:1px solid var(--card-border);}
+  .stat-box .val{font-family:'Caveat',cursive;font-weight:700;font-size:26px;line-height:1;color:var(--ink);}
+  .stat-box .lbl{font-size:11px;color:var(--ink-soft);font-weight:600;margin-top:2px;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .chip{display:flex;align-items:center;gap:5px;background:var(--paper);border:1px solid var(--card-border);
+    border-radius:999px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--ink);}
+  .chip .dot{width:8px;height:8px;border-radius:50%;}
+  .face-row{display:flex;gap:10px;margin-top:8px;}
+  .face-mini{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .see-more{text-align:center;font-size:12px;font-weight:700;color:var(--ink-soft);margin-top:8px;}
+  .see-more span{color:var(--red);}
+
+  /* Buttons */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    border:none;border-radius:12px;padding:12px 16px;font-family:'Manrope',sans-serif;
+    font-weight:700;font-size:14.5px;cursor:pointer;width:100%;
+  }
+  .btn-primary{background:var(--ink);color:var(--btn-fg);}
+  .btn-primary:active{background:var(--red);}
+  .btn-ghost{background:var(--paper);color:var(--ink);border:1px solid var(--card-border);}
+  .btn-danger{background:var(--card);color:var(--red);border:1px solid #F3C6C9;}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(43,46,74,0.45);
+    display:flex;align-items:flex-end;justify-content:center;z-index:50;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .modal{
+    background:var(--paper);width:100%;max-width:480px;
+    border-radius:22px 22px 0 0;max-height:88vh;overflow-y:auto;
+    padding:18px 18px 26px;
+    transform:translateY(16px);transition:transform .22s ease;
+  }
+  .overlay.show .modal{transform:translateY(0);}
+  .modal-handle{width:38px;height:4px;background:var(--card-border);border-radius:4px;margin:0 auto 14px;}
+  .modal h2{font-family:'Caveat',cursive;font-size:26px;margin:0 0 14px;color:var(--ink);}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;}
+  .field input[type=date],
+  .field input[type=text],
+  .field input[type=url],
+  .field select{
+    width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid var(--card-border);
+    background:var(--card);font-family:'Manrope',sans-serif;font-size:14.5px;color:var(--ink);
+  }
+  .req{color:var(--red);}
+
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .type-opt{
+    border:1.5px solid var(--card-border);border-radius:10px;padding:10px;
+    display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--card);font-size:13px;font-weight:700;
+  }
+  .type-opt .dot{width:12px;height:12px;border-radius:4px;flex-shrink:0;}
+  .type-opt.active{border-color:var(--ink);background:var(--paper);}
+
+  .check-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .check-opt{
+    border:1.5px solid var(--card-border);border-radius:999px;padding:8px 14px;
+    cursor:pointer;font-size:13px;font-weight:700;background:var(--card);color:var(--ink-soft);
+  }
+  .check-opt.active{background:var(--ink);color:var(--btn-fg);border-color:var(--ink);}
+
+  .face-select{display:flex;gap:10px;}
+  .face-opt{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    border:2px solid transparent;border-radius:12px;padding:8px 4px;cursor:pointer;background:transparent;
+  }
+  .face-opt.active{border-color:var(--ink);background:var(--card);}
+  .caption{
+    margin-top:8px;font-family:'Caveat',cursive;font-weight:700;font-size:18px;
+    color:var(--ink);background:var(--card);border:1.5px dashed var(--card-border);
+    border-radius:10px;padding:8px 10px;text-align:center;
+  }
+
+  .modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+
+  /* Motivational popup */
+  .motiv-overlay{
+    position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:rgba(43,46,74,0.55);opacity:0;pointer-events:none;transition:opacity .25s ease;
+    padding:24px;
+  }
+  .motiv-overlay.show{opacity:1;pointer-events:auto;}
+  .motiv-card{
+    background:var(--card);border-radius:22px;padding:34px 26px;text-align:center;
+    box-shadow:var(--shadow-lg);transform:scale(.85);transition:transform .28s cubic-bezier(.34,1.56,.64,1);
+  }
+  .motiv-overlay.show .motiv-card{transform:scale(1);}
+  .motiv-card .emoji{font-size:44px;margin-bottom:6px;}
+  .motiv-card .txt{font-family:'Caveat',cursive;font-weight:700;font-size:36px;color:var(--ink);}
+  .motiv-card .sub{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-top:6px;}
+  .motiv-card .tap-hint{
+    font-size:11.5px;color:var(--ink-faint);font-weight:700;margin-top:18px;
+    text-transform:uppercase;letter-spacing:.06em;animation:tapPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tapPulse{ 0%,100%{opacity:.5;} 50%{opacity:1;} }
+
+  /* Stats page */
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .back-btn{
+    width:38px;height:38px;border-radius:50%;border:1px solid var(--card-border);
+    background:var(--card);font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .topbar h1{font-family:'Caveat',cursive;font-size:28px;margin:0;}
+  .range-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;}
+  .range-tabs button{
+    border:1.5px solid var(--card-border);background:var(--card);border-radius:999px;padding:8px 14px;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;cursor:pointer;
+  }
+  .range-tabs button.active{background:var(--ink);color:var(--btn-fg);border-color:var(--ink);}
+  .bignum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .bignum{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);}
+  .bignum .val{font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:var(--ink);line-height:1;}
+  .bignum .lbl{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:4px;}
+  .chart-wrap{position:relative;height:220px;margin-top:6px;}
+  .empty-state{text-align:center;padding:30px 10px;color:var(--ink-soft);}
+  .empty-state .em{font-size:34px;margin-bottom:8px;}
+  .empty-state .msg{font-family:'Caveat',cursive;font-size:22px;color:var(--ink);}
+
+  .loading{display:flex;align-items:center;justify-content:center;min-height:70vh;color:var(--ink-soft);font-weight:700;}
+
+  a{color:var(--blue);}
+  body.dark{color-scheme:dark;}
+  body.dark input, body.dark select{color-scheme:dark;}
+
+  .settings-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 2px;border-bottom:1px solid var(--card-border);
+  }
+  .settings-row:last-of-type{border-bottom:none;}
+  .settings-row .srlabel{font-size:14.5px;font-weight:700;color:var(--ink);}
+  .settings-row .srsub{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:2px;}
+  .switch{position:relative;display:inline-block;width:46px;height:27px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .slider{
+    position:absolute;cursor:pointer;inset:0;background:var(--card-border);
+    border-radius:999px;transition:.2s;
+  }
+  .switch .slider:before{
+    content:"";position:absolute;height:21px;width:21px;left:3px;bottom:3px;
+    background:var(--card);border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch input:checked + .slider{background:var(--ink);}
+  .switch input:checked + .slider:before{transform:translateX(19px);}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"><div class="loading">Sto aprendo il diario…</div></div>
+<div id="modalRoot"></div>
+<div id="motivRoot"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const TYPES = {
+  indoor:      { label:'Arrampicata indoor',  color:'#E63946' },
+  outdoor:     { label:'Arrampicata outdoor', color:'#F2994A' },
+  corpo:       { label:'Corpo libero',        color:'#457B9D' },
+  yoga:        { label:'Yoga',                color:'#9B5DE5' },
+  escursione:  { label:'Escursione',          color:'#588157' },
+};
+
+const DETAILS = [
+  { key:'gambe',    label:'Gambe' },
+  { key:'core',     label:'Core' },
+  { key:'superiore',label:'Parte superiore' },
+  { key:'total',    label:'Total-body' },
+  { key:'pesi',     label:'Pesi' },
+  { key:'altro',    label:'Altro' },
+];
+
+const LOCATIONS = [
+  { key:'casa',     label:'Casa' },
+  { key:'bigup',    label:'BigUp' },
+  { key:'alpiteca', label:'Alpiteca' },
+  { key:'farmacia', label:'Farmacia' },
+  { key:'altro',    label:'Altro' },
+];
+
+const FACES = {
+  sad:     { color:'#457B9D', emoji:'😔' },
+  neutral: { color:'#F2C94C', emoji:'😐' },
+  happy:   { color:'#588157', emoji:'😄' },
+};
+
+const MOOD_CAPTIONS = {
+  sad:'Sii fiera di te, oggi vale doppio!',
+  neutral:'Super determinata!',
+  happy:'Boost di felicità!',
+};
+const HOWWENT_CAPTIONS = {
+  sad:'Non ti preoccupare, ricordati che anche il poco si conta!',
+  neutral:'Poteva comunque andare peggio, brava!',
+  happy:'Oggi sei on fire!!',
+};
+
+const MOTIV_PHRASES = ['YOU GO GIRL!','FANTASTICA!','SEI UN DRAGO!','YOU DID IT!','GOOD JOB!','WELL DONE!','PAZZESCA!','MA COSA SEI!?','TROPPO FORTE!','KEEP GOING!','UNSTOPPABLE!'];
+
+const WEEKDAYS = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const MONTHS = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const PALETTE = ['#457B9D','#9B5DE5','#588157','#F2994A','#F2C94C','#E63946','#2A9D8F','#BC6C25'];
+
+/* ============ STATE ============ */
+const state = {
+  workouts: [],
+  page:'home',       // 'home' | 'stats'
+  viewYear: new Date().getFullYear(),
+  viewMonth: new Date().getMonth(), // 0-indexed
+  statsRange: 'week', // week | month | year | all
+  loaded:false,
+  theme: 'light',     // 'light' | 'dark'
+};
+let charts = {};
+
+/* ============ THEME ============ */
+const THEME_KEY = 'diario_allenamenti_theme_v1';
+function loadTheme(){
+  try{
+    const saved = localStorage.getItem(THEME_KEY);
+    if(saved==='dark' || saved==='light') return saved;
+  }catch(e){}
+  // fall back to the device's system preference
+  if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  return 'light';
+}
+function applyTheme(){
+  document.body.classList.toggle('dark', state.theme==='dark');
+}
+function setTheme(t){
+  state.theme = t;
+  applyTheme();
+  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+}
+
+/* ============ STORAGE ============ */
+const STORAGE_KEY = 'diario_allenamenti_workouts_v1';
+
+async function loadWorkouts(){
+  // localStorage works when this file is opened directly in the browser (its intended use).
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn('localStorage non disponibile in lettura', e); }
+
+  // fallback: the Claude-artifact storage API, in case this is being previewed inside Claude.
+  try{
+    if(window.storage){
+      const res = await window.storage.get(STORAGE_KEY, false);
+      return res && res.value ? JSON.parse(res.value) : [];
+    }
+  }catch(e){ /* not available in this context, that's fine */ }
+
+  return [];
+}
+
+async function persistWorkouts(){
+  let savedLocally = false;
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.workouts));
+    savedLocally = true;
+  }catch(e){ console.warn('localStorage non disponibile in scrittura', e); }
+
+  try{
+    if(window.storage) await window.storage.set(STORAGE_KEY, JSON.stringify(state.workouts), false);
+  }catch(e){ /* not available in this context, that's fine */ }
+
+  if(!savedLocally) console.warn('Attenzione: i dati potrebbero non persistere tra le sessioni in questo browser.');
+}
+
+/* ============ HELPERS ============ */
+function todayISO(){ return isoDate(new Date()); }
+function isoDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function fmtDurationLabel(h){ return h===1 ? '1 ora' : `${h} ore`; }
+function durationOptions(){
+  const opts=[];
+  for(let h=0.5; h<=6; h+=0.5) opts.push(h);
+  return opts;
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function workoutsOn(dateStr){ return state.workouts.filter(w=>w.date===dateStr); }
+function faceSVG(kind, size=30){
+  const c = FACES[kind].color;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="18" fill="${c}" opacity="0.15"/>
+    <circle cx="20" cy="20" r="15" fill="${c}"/>
+    <circle cx="14.5" cy="17" r="2.1" fill="#fff"/>
+    <circle cx="25.5" cy="17" r="2.1" fill="#fff"/>
+    ${kind==='happy' ? '<path d="M13 24 Q20 31 27 24" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ''}
+    ${kind==='neutral' ? '<path d="M14 25 H26" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ''}
+    ${kind==='sad' ? '<path d="M13 27 Q20 20 27 27" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ''}
+  </svg>`;
+}
+
+function startOfWeek(d){
+  const date = new Date(d);
+  const day = (date.getDay()+6)%7; // Monday=0
+  date.setDate(date.getDate()-day);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function inRange(dateStr, range){
+  const d = new Date(dateStr+'T00:00:00');
+  const now = new Date();
+  if(range==='all') return true;
+  if(range==='week'){
+    const s = startOfWeek(now); const e = new Date(s); e.setDate(e.getDate()+7);
+    return d>=s && d<e;
+  }
+  if(range==='month') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  if(range==='year') return d.getFullYear()===now.getFullYear();
+  return true;
+}
+
+/* ============ RENDER: APP SHELL ============ */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = state.page==='home' ? renderHomeHTML() : renderStatsHTML();
+  attachHomeOrStatsEvents();
+  if(state.page==='stats') requestAnimationFrame(buildCharts);
+}
+
+/* ============ HOME PAGE ============ */
+function renderHomeHTML(){
+  const weekWorkouts = state.workouts.filter(w=>inRange(w.date,'week'));
+  return `
+    <div class="header">
+      <div class="brand">
+        <h1>Diario degli allenamenti</h1>
+        <p>Ricorda: non guardare quanto manca alla meta, guarda quanta strada hai già fatto &#127941;</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="add-btn" id="btnSettings" aria-label="Impostazioni" style="background:var(--card);color:var(--ink);border:1px solid var(--card-border);font-size:19px;">⚙</button>
+        <button class="add-btn" id="btnAdd" aria-label="Aggiungi allenamento">+</button>
+      </div>
+    </div>
+
+    ${renderCalendarCard()}
+    ${renderWeeklyStatsCard(weekWorkouts)}
+  `;
+}
+
+function renderCalendarCard(){
+  const y = state.viewYear, m = state.viewMonth;
+  const first = new Date(y,m,1);
+  const firstWeekday = (first.getDay()+6)%7; // Monday-start
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const daysInPrevMonth = new Date(y,m,0).getDate();
+  const today = todayISO();
+
+  let cells = '';
+  // leading days from previous month
+  for(let i=firstWeekday-1;i>=0;i--){
+    const dnum = daysInPrevMonth-i;
+    cells += `<div class="day-cell other-month"><span class="num">${dnum}</span></div>`;
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dw = workoutsOn(dateStr);
+    const isToday = dateStr===today;
+    let classes = 'day-cell';
+    if(isToday) classes += ' today';
+    let fillHTML = '';
+    if(dw.length>0){
+      classes += dw.length===1 ? ' has-workout solo' : ' has-workout';
+      fillHTML = `<div class="day-fill">${dw.map(w=>`<span style="background:${TYPES[w.type].color}"></span>`).join('')}</div>`;
+    }
+    cells += `<div class="${classes}" data-date="${dateStr}">${fillHTML}<span class="num">${d}</span></div>`;
+  }
+  // trailing days to complete grid (fill to multiple of 7)
+  const totalSoFar = firstWeekday + daysInMonth;
+  const trailing = (7 - (totalSoFar % 7)) % 7;
+  for(let d=1; d<=trailing; d++){
+    cells += `<div class="day-cell other-month"><span class="num">${d}</span></div>`;
+  }
+
+  return `
+  <div class="card">
+    <div class="cal-nav">
+      <button id="prevMonth" aria-label="Mese precedente">‹</button>
+      <div class="month-label">${MONTHS[m]} ${y}</div>
+      <button id="nextMonth" aria-label="Mese successivo">›</button>
+    </div>
+    <div class="weekdays">${WEEKDAYS.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="days">${cells}</div>
+    <div class="legend">
+      ${Object.entries(TYPES).map(([k,t])=>`<div class="legend-item"><span class="legend-dot" style="background:${t.color}"></span>${t.label}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderWeeklyStatsCard(weekWorkouts){
+  const totalOre = weekWorkouts.reduce((s,w)=>s+(Number(w.duration)||0),0);
+  const giorniAllenati = new Set(weekWorkouts.map(w=>w.date)).size;
+  const perTipo = {};
+  weekWorkouts.forEach(w=>{ perTipo[w.type]=(perTipo[w.type]||0)+1; });
+
+  const moodCounts = {sad:0,neutral:0,happy:0};
+  const howCounts = {sad:0,neutral:0,happy:0};
+  weekWorkouts.forEach(w=>{ if(w.mood) moodCounts[w.mood]++; if(w.howWent) howCounts[w.howWent]++; });
+
+  return `
+  <div class="card stats-summary" id="btnStats">
+    <div class="card-title">Questa settimana <span style="font-size:13px;color:var(--ink-faint);font-family:'Manrope',sans-serif;font-weight:700;">›</span></div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="val">${weekWorkouts.length}</div><div class="lbl">Allenamenti totali</div></div>
+      <div class="stat-box"><div class="val">${giorniAllenati}</div><div class="lbl">Giorni allenati</div></div>
+      <div class="stat-box"><div class="val">${totalOre}</div><div class="lbl">Ore totali</div></div>
+      <div class="stat-box"><div class="val">${weekWorkouts.length? (totalOre/weekWorkouts.length).toFixed(1):'0'}</div><div class="lbl">Media ore/sessione</div></div>
+    </div>
+    ${Object.keys(perTipo).length? `<div class="chip-row">${Object.entries(perTipo).map(([k,c])=>`<div class="chip"><span class="dot" style="background:${TYPES[k].color}"></span>${TYPES[k].label} · ${c}</div>`).join('')}</div>` : ''}
+    ${(moodCounts.sad+moodCounts.neutral+moodCounts.happy)>0 ? `
+    <div class="face-row">
+      <div class="face-mini">${faceSVG('sad',18)} ${moodCounts.sad}</div>
+      <div class="face-mini">${faceSVG('neutral',18)} ${moodCounts.neutral}</div>
+      <div class="face-mini">${faceSVG('happy',18)} ${moodCounts.happy}</div>
+      <div style="font-size:11px;color:var(--ink-faint);align-self:center;">mood</div>
+    </div>` : ''}
+    <div class="see-more">Tocca per le statistiche complete <span>→</span></div>
+  </div>`;
+}
+
+/* ============ STATS PAGE ============ */
+function renderStatsHTML(){
+  const filtered = state.workouts.filter(w=>inRange(w.date, state.statsRange));
+  const totalOre = filtered.reduce((s,w)=>s+(Number(w.duration)||0),0);
+  const giorni = new Set(filtered.map(w=>w.date)).size;
+  const rangeLabels = {week:'Settimana',month:'Mese',year:'Anno',all:'Sempre'};
+
+  const perTipo = {}; Object.keys(TYPES).forEach(k=>perTipo[k]=0);
+  filtered.forEach(w=>{ perTipo[w.type] = (perTipo[w.type]||0)+1; });
+
+  const moodCounts = {sad:0,neutral:0,happy:0};
+  const howCounts = {sad:0,neutral:0,happy:0};
+  filtered.forEach(w=>{ if(w.mood) moodCounts[w.mood]++; if(w.howWent) howCounts[w.howWent]++; });
+
+  const detailCounts = {}; DETAILS.forEach(d=>detailCounts[d.key]=0);
+  filtered.forEach(w=>{ (w.details||[]).forEach(k=>{ if(detailCounts[k]!==undefined) detailCounts[k]++; }); });
+  const hasDetails = Object.values(detailCounts).some(v=>v>0);
+
+  const locationCounts = {}; LOCATIONS.forEach(l=>locationCounts[l.key]=0);
+  filtered.forEach(w=>{ if(w.location && locationCounts[w.location]!==undefined) locationCounts[w.location]++; });
+  const hasLocations = Object.values(locationCounts).some(v=>v>0);
+
+  const linkedWorkouts = filtered.filter(w=>w.link).sort((a,b)=>b.date.localeCompare(a.date));
+
+  const hasData = filtered.length>0;
+
+  return `
+  <div class="topbar">
+    <button class="back-btn" id="btnBack">‹</button>
+    <h1>Statistiche</h1>
+  </div>
+  <div class="range-tabs">
+    ${Object.entries(rangeLabels).map(([k,l])=>`<button data-range="${k}" class="${state.statsRange===k?'active':''}">${l}</button>`).join('')}
+  </div>
+
+  <div class="bignum-grid">
+    <div class="bignum"><div class="val">${filtered.length}</div><div class="lbl">Allenamenti</div></div>
+    <div class="bignum"><div class="val">${totalOre}</div><div class="lbl">Ore totali</div></div>
+    <div class="bignum"><div class="val">${giorni}</div><div class="lbl">Giorni allenati</div></div>
+    <div class="bignum"><div class="val">${filtered.length? (totalOre/filtered.length).toFixed(1):'0'}</div><div class="lbl">Media ore/sessione</div></div>
+  </div>
+
+  ${!hasData ? `
+    <div class="card"><div class="empty-state">
+      <div class="em">🗓️</div>
+      <div class="msg">Ancora nessun allenamento in questo periodo</div>
+    </div></div>
+  ` : `
+  <div class="card">
+    <div class="card-title">Allenamenti per tipo</div>
+    <div class="chart-wrap"><canvas id="chartTypes"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Ore per tipo</div>
+    <div class="chart-wrap"><canvas id="chartHoursByType"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Mood</div>
+    <div class="chart-wrap" style="height:200px;"><canvas id="chartMood"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Come è andata</div>
+    <div class="chart-wrap" style="height:200px;"><canvas id="chartHow"></canvas></div>
+  </div>
+  ${hasDetails ? `
+  <div class="card">
+    <div class="card-title">Dettagli più allenati</div>
+    <div class="chart-wrap"><canvas id="chartDetails"></canvas></div>
+  </div>` : ''}
+  ${hasLocations ? `
+  <div class="card">
+    <div class="card-title">Dove ti alleni</div>
+    <div class="chart-wrap"><canvas id="chartLocations"></canvas></div>
+  </div>` : ''}
+  ${linkedWorkouts.length ? `
+  <div class="card">
+    <div class="card-title">Link salvati <span style="font-size:12px;color:var(--ink-faint);font-family:'Manrope',sans-serif;font-weight:700;">${linkedWorkouts.length}</span></div>
+    ${linkedWorkouts.slice(0,8).map(w=>{
+      const [yy,mm,dd] = w.date.split('-');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--card-border);">
+        <div style="font-size:12.5px;color:var(--ink-soft);font-weight:700;">${dd}/${mm}/${yy} · ${TYPES[w.type].label}</div>
+        <a href="${escapeAttr(w.link)}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:700;">Apri ↗</a>
+      </div>`;
+    }).join('')}
+  </div>` : ''}
+  `}
+  `;
+}
+
+function buildCharts(){
+  Object.values(charts).forEach(c=>c && c.destroy());
+  charts = {};
+  if(typeof Chart==='undefined') return;
+
+  const inkColor = getComputedStyle(document.body).getPropertyValue('--ink').trim() || '#2B2E4A';
+  const gridColor = getComputedStyle(document.body).getPropertyValue('--card-border').trim() || '#ECE7D8';
+
+  const filtered = state.workouts.filter(w=>inRange(w.date, state.statsRange));
+  if(filtered.length===0) return;
+
+  const perTipo = {}; Object.keys(TYPES).forEach(k=>perTipo[k]=0);
+  filtered.forEach(w=>{ perTipo[w.type]++; });
+
+  const ctxTypes = document.getElementById('chartTypes');
+  if(ctxTypes){
+    charts.types = new Chart(ctxTypes, {
+      type:'bar',
+      data:{
+        labels: Object.keys(TYPES).map(k=>TYPES[k].label),
+        datasets:[{ data: Object.keys(TYPES).map(k=>perTipo[k]), backgroundColor: Object.keys(TYPES).map(k=>TYPES[k].color), borderRadius:8 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{beginAtZero:true, ticks:{stepSize:1, font:{family:'Manrope'}, color:inkColor}, grid:{color:gridColor}},
+          x:{ticks:{font:{family:'Manrope', size:10}, color:inkColor}, grid:{color:gridColor}}
+        }
+      }
+    });
+  }
+
+  const moodCounts = {sad:0,neutral:0,happy:0};
+  const howCounts = {sad:0,neutral:0,happy:0};
+  filtered.forEach(w=>{ if(w.mood) moodCounts[w.mood]++; if(w.howWent) howCounts[w.howWent]++; });
+
+  const ctxMood = document.getElementById('chartMood');
+  if(ctxMood){
+    charts.mood = new Chart(ctxMood, {
+      type:'doughnut',
+      data:{ labels:['Triste','Neutra','Felice'], datasets:[{ data:[moodCounts.sad,moodCounts.neutral,moodCounts.happy], backgroundColor:[FACES.sad.color,FACES.neutral.color,FACES.happy.color] }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{font:{family:'Manrope',size:11}, color:inkColor}}} }
+    });
+  }
+  const ctxHow = document.getElementById('chartHow');
+  if(ctxHow){
+    charts.how = new Chart(ctxHow, {
+      type:'doughnut',
+      data:{ labels:['Triste','Neutra','Felice'], datasets:[{ data:[howCounts.sad,howCounts.neutral,howCounts.happy], backgroundColor:[FACES.sad.color,FACES.neutral.color,FACES.happy.color] }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{font:{family:'Manrope',size:11}, color:inkColor}}} }
+    });
+  }
+
+  // Ore per tipo
+  const oreTipo = {}; Object.keys(TYPES).forEach(k=>oreTipo[k]=0);
+  filtered.forEach(w=>{ oreTipo[w.type] = (oreTipo[w.type]||0) + (Number(w.duration)||0); });
+  const ctxHoursByType = document.getElementById('chartHoursByType');
+  if(ctxHoursByType){
+    charts.hoursByType = new Chart(ctxHoursByType, {
+      type:'bar',
+      data:{
+        labels: Object.keys(TYPES).map(k=>TYPES[k].label),
+        datasets:[{ data: Object.keys(TYPES).map(k=>oreTipo[k]), backgroundColor: Object.keys(TYPES).map(k=>TYPES[k].color), borderRadius:8 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{beginAtZero:true, ticks:{font:{family:'Manrope'}, color:inkColor}, grid:{color:gridColor}},
+          x:{ticks:{font:{family:'Manrope', size:10}, color:inkColor}, grid:{color:gridColor}}
+        }
+      }
+    });
+  }
+
+  // Dettagli più allenati
+  const detailCounts = {}; DETAILS.forEach(d=>detailCounts[d.key]=0);
+  filtered.forEach(w=>{ (w.details||[]).forEach(k=>{ if(detailCounts[k]!==undefined) detailCounts[k]++; }); });
+  const ctxDetails = document.getElementById('chartDetails');
+  if(ctxDetails){
+    charts.details = new Chart(ctxDetails, {
+      type:'bar',
+      data:{
+        labels: DETAILS.map(d=>d.label),
+        datasets:[{ data: DETAILS.map(d=>detailCounts[d.key]), backgroundColor: DETAILS.map((d,i)=>PALETTE[i % PALETTE.length]), borderRadius:8 }]
+      },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{beginAtZero:true, ticks:{stepSize:1, font:{family:'Manrope'}, color:inkColor}, grid:{color:gridColor}},
+          y:{ticks:{font:{family:'Manrope', size:11}, color:inkColor}, grid:{display:false}}
+        }
+      }
+    });
+  }
+
+  // Dove ti alleni
+  const locationCounts = {}; LOCATIONS.forEach(l=>locationCounts[l.key]=0);
+  filtered.forEach(w=>{ if(w.location && locationCounts[w.location]!==undefined) locationCounts[w.location]++; });
+  const ctxLocations = document.getElementById('chartLocations');
+  if(ctxLocations){
+    charts.locations = new Chart(ctxLocations, {
+      type:'bar',
+      data:{
+        labels: LOCATIONS.map(l=>l.label),
+        datasets:[{ data: LOCATIONS.map(l=>locationCounts[l.key]), backgroundColor: LOCATIONS.map((l,i)=>PALETTE[(i+3) % PALETTE.length]), borderRadius:8 }]
+      },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{beginAtZero:true, ticks:{stepSize:1, font:{family:'Manrope'}, color:inkColor}, grid:{color:gridColor}},
+          y:{ticks:{font:{family:'Manrope', size:11}, color:inkColor}, grid:{display:false}}
+        }
+      }
+    });
+  }
+}
+
+/* ============ EVENTS: HOME / STATS ============ */
+function attachHomeOrStatsEvents(){
+  if(state.page==='home'){
+    document.getElementById('btnAdd').onclick = ()=>openWorkoutForm({date:todayISO()});
+    document.getElementById('btnSettings').onclick = ()=>openSettings();
+    document.getElementById('btnStats').onclick = ()=>{ state.page='stats'; render(); };
+    document.getElementById('prevMonth').onclick = ()=>{ shiftMonth(-1); };
+    document.getElementById('nextMonth').onclick = ()=>{ shiftMonth(1); };
+    document.querySelectorAll('.day-cell[data-date]').forEach(cell=>{
+      cell.onclick = ()=>{
+        const date = cell.dataset.date;
+        const dw = workoutsOn(date);
+        if(dw.length===0) openWorkoutForm({date});
+        else openDayView(date);
+      };
+    });
+  } else {
+    document.getElementById('btnBack').onclick = ()=>{ state.page='home'; render(); };
+    document.querySelectorAll('.range-tabs button').forEach(btn=>{
+      btn.onclick = ()=>{ state.statsRange = btn.dataset.range; render(); };
+    });
+  }
+}
+function shiftMonth(delta){
+  let m = state.viewMonth + delta, y = state.viewYear;
+  if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+  state.viewMonth=m; state.viewYear=y; render();
+}
+
+/* ============ MODALS ============ */
+function showOverlay(html){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `<div class="overlay" id="ov"><div class="modal">${html}</div></div>`;
+  requestAnimationFrame(()=>document.getElementById('ov').classList.add('show'));
+  document.getElementById('ov').addEventListener('click', (e)=>{ if(e.target.id==='ov') closeModal(); });
+}
+function closeModal(){
+  const ov = document.getElementById('ov');
+  if(!ov) return;
+  ov.classList.remove('show');
+  setTimeout(()=>{ document.getElementById('modalRoot').innerHTML=''; }, 200);
+}
+
+/* ---- Day view modal (list of workouts on a day) ---- */
+function openDayView(dateStr){
+  const dw = workoutsOn(dateStr);
+  const [y,m,d] = dateStr.split('-');
+  const niceDate = `${d} ${MONTHS[parseInt(m,10)-1]} ${y}`;
+  const cardsHTML = dw.map(w=>workoutDetailCardHTML(w)).join('');
+  showOverlay(`
+    <div class="modal-handle"></div>
+    <h2>${niceDate}</h2>
+    ${cardsHTML}
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="addAnother">+ Aggiungi un altro allenamento</button>
+      <button class="btn btn-ghost" id="closeBtn">Chiudi</button>
+    </div>
+  `);
+  document.getElementById('addAnother').onclick = ()=>openWorkoutForm({date:dateStr});
+  document.getElementById('closeBtn').onclick = closeModal;
+  dw.forEach(w=>{
+    const editBtn = document.getElementById('edit-'+w.id);
+    const delBtn = document.getElementById('del-'+w.id);
+    if(editBtn) editBtn.onclick = ()=>openWorkoutForm(w);
+    if(delBtn) delBtn.onclick = async ()=>{
+      state.workouts = state.workouts.filter(x=>x.id!==w.id);
+      await persistWorkouts();
+      const remaining = workoutsOn(dateStr);
+      if(remaining.length) openDayView(dateStr); else closeModal();
+      render();
+    };
+  });
+}
+
+function workoutDetailCardHTML(w){
+  const t = TYPES[w.type];
+  const detailLabels = (w.details||[]).map(k=>{
+    if(k==='altro') return w.detailsAltro ? `Altro: ${escapeHTML(w.detailsAltro)}` : 'Altro';
+    return DETAILS.find(x=>x.key===k)?.label || k;
+  });
+  const locLabel = w.location ? (w.location==='altro' ? (w.locationAltro || 'Altro') : LOCATIONS.find(x=>x.key===w.location)?.label) : null;
+  return `
+  <div class="card" style="border-left:6px solid ${t.color};">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-weight:800;font-size:15px;">${t.label}</div>
+      <div style="font-size:12px;color:var(--ink-soft);font-weight:700;">${fmtDurationLabel(Number(w.duration))}</div>
+    </div>
+    ${detailLabels.length? `<div class="chip-row">${detailLabels.map(l=>`<div class="chip">${escapeHTML(l)}</div>`).join('')}</div>` : ''}
+    ${w.mood ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">${faceSVG(w.mood,26)}<span style="font-size:12.5px;color:var(--ink-soft);font-weight:700;">Mood</span></div><div class="caption">${MOOD_CAPTIONS[w.mood]}</div>` : ''}
+    ${w.howWent ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">${faceSVG(w.howWent,26)}<span style="font-size:12.5px;color:var(--ink-soft);font-weight:700;">Com'è andata</span></div><div class="caption">${HOWWENT_CAPTIONS[w.howWent]}</div>` : ''}
+    ${locLabel ? `<div style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"><b>Dove:</b> ${escapeHTML(locLabel)}</div>` : ''}
+    ${w.link ? `<div style="margin-top:6px;font-size:12.5px;"><a href="${escapeAttr(w.link)}" target="_blank" rel="noopener">Apri link ↗</a></div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-ghost" id="edit-${w.id}" style="padding:9px;">Modifica</button>
+      <button class="btn btn-danger" id="del-${w.id}" style="padding:9px;">Elimina</button>
+    </div>
+  </div>`;
+}
+
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHTML(s); }
+
+/* ---- Add / edit workout form ---- */
+function openWorkoutForm(existing){
+  const isEdit = !!existing.id;
+  const w = Object.assign({
+    id:null, date: todayISO(), type:null, duration:1, details:[], detailsAltro:'',
+    mood:null, howWent:null, location:null, locationAltro:'', link:''
+  }, existing);
+
+  showOverlay(`
+    <div class="modal-handle"></div>
+    <h2>${isEdit ? 'Modifica allenamento' : 'Nuovo allenamento'}</h2>
+    <form id="wForm">
+      <div class="field">
+        <label>Data <span class="req">*</span></label>
+        <input type="date" id="f_date" value="${w.date}" required>
+      </div>
+
+      <div class="field">
+        <label>Tipologia <span class="req">*</span></label>
+        <div class="type-grid" id="f_type_grid">
+          ${Object.entries(TYPES).map(([k,t])=>`
+            <div class="type-opt ${w.type===k?'active':''}" data-type="${k}">
+              <span class="dot" style="background:${t.color}"></span>${t.label}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Durata</label>
+        <select id="f_duration">
+          ${durationOptions().map(h=>`<option value="${h}" ${Number(w.duration)===h?'selected':''}>${fmtDurationLabel(h)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Dettagli</label>
+        <div class="check-grid" id="f_details_grid">
+          ${DETAILS.map(d=>`<div class="check-opt ${w.details.includes(d.key)?'active':''}" data-detail="${d.key}">${d.label}</div>`).join('')}
+        </div>
+        <div id="f_altro_detail_wrap" style="margin-top:8px;display:${w.details.includes('altro')?'block':'none'};">
+          <input type="text" id="f_details_altro" placeholder="Specifica..." value="${escapeAttr(w.detailsAltro||'')}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Mood</label>
+        <div class="face-select" id="f_mood_row">
+          ${['sad','neutral','happy'].map(k=>`<div class="face-opt ${w.mood===k?'active':''}" data-mood="${k}">${faceSVG(k,32)}</div>`).join('')}
+        </div>
+        <div id="f_mood_caption">${w.mood ? `<div class="caption">${MOOD_CAPTIONS[w.mood]}</div>` : ''}</div>
+      </div>
+
+      <div class="field">
+        <label>Com'è andata</label>
+        <div class="face-select" id="f_how_row">
+          ${['sad','neutral','happy'].map(k=>`<div class="face-opt ${w.howWent===k?'active':''}" data-how="${k}">${faceSVG(k,32)}</div>`).join('')}
+        </div>
+        <div id="f_how_caption">${w.howWent ? `<div class="caption">${HOWWENT_CAPTIONS[w.howWent]}</div>` : ''}</div>
+      </div>
+
+      <div class="field">
+        <label>Dove</label>
+        <select id="f_location">
+          <option value="" ${!w.location?'selected':''}>—</option>
+          ${LOCATIONS.map(l=>`<option value="${l.key}" ${w.location===l.key?'selected':''}>${l.label}</option>`).join('')}
+        </select>
+        <div id="f_loc_altro_wrap" style="margin-top:8px;display:${w.location==='altro'?'block':'none'};">
+          <input type="text" id="f_location_altro" placeholder="Specifica..." value="${escapeAttr(w.locationAltro||'')}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Link (facoltativo)</label>
+        <input type="url" id="f_link" placeholder="https://youtube.com/..." value="${escapeAttr(w.link||'')}">
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">${isEdit?'Salva modifiche':'Salva allenamento'}</button>
+        ${isEdit ? `<button type="button" class="btn btn-danger" id="deleteFromForm">Elimina allenamento</button>` : ''}
+        <button type="button" class="btn btn-ghost" id="cancelForm">Annulla</button>
+      </div>
+    </form>
+  `);
+
+  let selType = w.type;
+  let selDetails = new Set(w.details);
+  let selMood = w.mood;
+  let selHow = w.howWent;
+
+  document.querySelectorAll('#f_type_grid .type-opt').forEach(el=>{
+    el.onclick = ()=>{
+      selType = el.dataset.type;
+      document.querySelectorAll('#f_type_grid .type-opt').forEach(o=>o.classList.remove('active'));
+      el.classList.add('active');
+    };
+  });
+
+  document.querySelectorAll('#f_details_grid .check-opt').forEach(el=>{
+    el.onclick = ()=>{
+      const key = el.dataset.detail;
+      if(selDetails.has(key)){ selDetails.delete(key); el.classList.remove('active'); }
+      else { selDetails.add(key); el.classList.add('active'); }
+      document.getElementById('f_altro_detail_wrap').style.display = selDetails.has('altro') ? 'block' : 'none';
+    };
+  });
+
+  document.querySelectorAll('#f_mood_row .face-opt').forEach(el=>{
+    el.onclick = ()=>{
+      selMood = el.dataset.mood;
+      document.querySelectorAll('#f_mood_row .face-opt').forEach(o=>o.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('f_mood_caption').innerHTML = `<div class="caption">${MOOD_CAPTIONS[selMood]}</div>`;
+    };
+  });
+  document.querySelectorAll('#f_how_row .face-opt').forEach(el=>{
+    el.onclick = ()=>{
+      selHow = el.dataset.how;
+      document.querySelectorAll('#f_how_row .face-opt').forEach(o=>o.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('f_how_caption').innerHTML = `<div class="caption">${HOWWENT_CAPTIONS[selHow]}</div>`;
+    };
+  });
+
+  document.getElementById('f_location').onchange = (e)=>{
+    document.getElementById('f_loc_altro_wrap').style.display = e.target.value==='altro' ? 'block' : 'none';
+  };
+
+  document.getElementById('cancelForm').onclick = closeModal;
+  if(isEdit){
+    document.getElementById('deleteFromForm').onclick = async ()=>{
+      state.workouts = state.workouts.filter(x=>x.id!==w.id);
+      await persistWorkouts();
+      closeModal();
+      render();
+    };
+  }
+
+  document.getElementById('wForm').onsubmit = async (e)=>{
+    e.preventDefault();
+    const date = document.getElementById('f_date').value;
+    if(!date || !selType){
+      alert('Data e tipologia sono obbligatorie.');
+      return;
+    }
+    const duration = parseFloat(document.getElementById('f_duration').value);
+    const detailsAltro = document.getElementById('f_details_altro') ? document.getElementById('f_details_altro').value.trim() : '';
+    const location = document.getElementById('f_location').value || null;
+    const locationAltro = document.getElementById('f_location_altro') ? document.getElementById('f_location_altro').value.trim() : '';
+    const link = document.getElementById('f_link').value.trim();
+
+    const record = {
+      id: w.id || uid(),
+      date, type: selType, duration,
+      details: Array.from(selDetails), detailsAltro,
+      mood: selMood || null, howWent: selHow || null,
+      location, locationAltro, link,
+    };
+
+    if(isEdit){
+      const idx = state.workouts.findIndex(x=>x.id===record.id);
+      state.workouts[idx] = record;
+    } else {
+      state.workouts.push(record);
+    }
+    await persistWorkouts();
+    closeModal();
+    // sync calendar view to the month of the saved workout
+    const [yy,mm] = date.split('-');
+    state.viewYear = parseInt(yy,10); state.viewMonth = parseInt(mm,10)-1;
+    render();
+    if(!isEdit) showMotivation();
+  };
+}
+
+/* ---- Backup export ---- */
+function exportBackup(){
+  const payload = {
+    app:'diario-allenamenti',
+    exportedAt: new Date().toISOString(),
+    workouts: state.workouts,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateTag = todayISO();
+  a.href = url;
+  a.download = `diario-allenamenti-backup-${dateTag}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function importBackupFile(file){
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      const incoming = Array.isArray(data) ? data : data.workouts;
+      if(!Array.isArray(incoming)) throw new Error('Formato non valido');
+      const ok = confirm(`Importare ${incoming.length} allenamenti? Verranno aggiunti a quelli esistenti (i duplicati con lo stesso ID verranno sovrascritti).`);
+      if(!ok) return;
+      const byId = new Map(state.workouts.map(w=>[w.id,w]));
+      incoming.forEach(w=>{ if(w && w.id) byId.set(w.id, w); });
+      state.workouts = Array.from(byId.values());
+      await persistWorkouts();
+      closeModal();
+      render();
+      alert('Backup importato con successo!');
+    }catch(err){
+      alert('Il file selezionato non sembra un backup valido.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---- Settings modal ---- */
+function openSettings(){
+  showOverlay(`
+    <div class="modal-handle"></div>
+    <h2>Impostazioni</h2>
+
+    <div class="settings-row">
+      <div>
+        <div class="srlabel">Modalità scura</div>
+        <div class="srsub">Attiva il tema dark su questo dispositivo</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="darkToggle" ${state.theme==='dark' ? 'checked' : ''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div class="srlabel">Backup dati</div>
+        <div class="srsub">${state.workouts.length} allenamenti salvati</div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-primary" id="btnExport">⬇ Esporta backup</button>
+      <button class="btn btn-ghost" id="btnImport">⬆ Importa backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
+      <button class="btn btn-ghost" id="closeSettings">Chiudi</button>
+    </div>
+  `);
+
+  document.getElementById('darkToggle').onchange = (e)=>{
+    setTheme(e.target.checked ? 'dark' : 'light');
+  };
+  document.getElementById('btnExport').onclick = exportBackup;
+  document.getElementById('btnImport').onclick = ()=>document.getElementById('importFile').click();
+  document.getElementById('importFile').onchange = (e)=>{
+    const file = e.target.files[0];
+    if(file) importBackupFile(file);
+  };
+  document.getElementById('closeSettings').onclick = closeModal;
+}
+
+/* ---- Motivational popup ---- */
+function showMotivation(){
+  const phrase = MOTIV_PHRASES[Math.floor(Math.random()*MOTIV_PHRASES.length)];
+  const root = document.getElementById('motivRoot');
+  const div = document.createElement('div');
+  div.className = 'motiv-overlay';
+  div.innerHTML = `<div class="motiv-card"><div class="emoji">🎉</div><div class="txt">${phrase}</div><div class="sub">Allenamento salvato</div><div class="tap-hint">Tocca per continuare</div></div>`;
+  root.appendChild(div);
+  requestAnimationFrame(()=>div.classList.add('show'));
+  const dismiss = ()=>{
+    div.classList.remove('show');
+    setTimeout(()=>div.remove(), 250);
+  };
+  div.onclick = dismiss;
+}
+
+/* ============ INIT ============ */
+(async function init(){
+  state.theme = loadTheme();
+  applyTheme();
+  state.workouts = await loadWorkouts();
+  state.loaded = true;
+  render();
+})();
+</script>
+</body>
+</html>
